@@ -1,0 +1,101 @@
+<style>
+  .input-error {
+    border: 2px solid #ff3b30 !important;
+    box-shadow: 0 0 0 2px #ff3b30, 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  }
+</style>
+
+<script>
+  function submitForm() {
+    const form = document.getElementById('orderForm');
+
+    // Обязательные поля
+    const fromInput = form.querySelector('input[name="from"]');
+    const toInput = form.querySelector('input[name="to"]');
+    const dateInput = form.querySelector('input[name="date"]');
+    const phoneInput = form.querySelector('input[name="phone"]');
+
+    // Очистка ошибок
+    [fromInput, toInput, dateInput, phoneInput].forEach(input => {
+      input.classList.remove('input-error');
+    });
+
+    let hasError = false;
+
+    // Проверка пустых
+    if (!fromInput.value.trim()) {
+      fromInput.classList.add('input-error');
+      hasError = true;
+    }
+    if (!toInput.value.trim()) {
+      toInput.classList.add('input-error');
+      hasError = true;
+    }
+    if (!dateInput.value.trim()) {
+      dateInput.classList.add('input-error');
+      hasError = true;
+    }
+    if (!phoneInput.value.trim()) {
+      phoneInput.classList.add('input-error');
+      hasError = true;
+    }
+
+    if (hasError) {
+      alert("Пожалуйста, заполните все обязательные поля.");
+      return;
+    }
+
+    // Проверка телефона
+    const phoneDigits = phoneInput.value.replace(/\D/g, '');
+    if (!/^7\d{10}$/.test(phoneDigits)) {
+      phoneInput.classList.add('input-error');
+      alert("Введите корректный номер телефона в формате +7 999 999 99 99.");
+      return;
+    }
+
+    // Данные для Bitrix
+    const data = {
+      fields: {
+        TITLE: "Форма мобильной версии сайта",
+        PHONE: [{ VALUE: phoneInput.value, VALUE_TYPE: "WORK" }],
+        COMMENTS:
+          "Маршрут: " + fromInput.value + " → " + toInput.value + "\n" +
+          "Дата: " + dateInput.value + "\n" +
+          "Пассажиров: " + document.getElementById('passengerCount').textContent + "\n" +
+          (form.from2.value || form.to2.value || form.date2.value
+            ? "Обратный маршрут: " + form.from2.value + " → " + form.to2.value + "\nДата: " + form.date2.value
+            : ""),
+        SOURCE_ID: 'WEB',
+        STATUS_ID: 'NEW',
+      },
+      params: { REGISTER_SONET_EVENT: "Y" }
+    };
+
+    fetch('https://b24-cnqbly.bitrix24.ru/rest/18/xmxj1yft51yq1t9o/crm.lead.add.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.result) {
+        form.reset();
+        showSuccessModal();
+      } else {
+        alert("Ошибка при создании лида: " + (result.error_description || "Неизвестная ошибка"));
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Произошла ошибка при отправке.");
+    });
+  }
+
+  function showSuccessModal() {
+    const modal = document.getElementById('successModal');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+    }, 3000);
+  }
+</script>
