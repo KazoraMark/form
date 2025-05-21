@@ -80,9 +80,40 @@
   #complexRoute.open {
     max-height:300px; opacity:1; transform:scaleY(1); overflow:visible;
   }
+  
+  .custom-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+      
+  }
+  
+  .custom-modal.hidden {
+  display: none;
+      
+  }
+  
+  .modal-content {
+  background: #fff;
+  color: #007aff;
+  padding: 25px 35px;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  font-size: 18px;
+  text-align: center;
+      
+  }
 
   .submit-btn { background:#288fd7; color:#fff; margin-top:5px; font-size:16px; }
-
+  
+.input-error {
+  border: 2px solid #ff3b30 !important;
+  box-shadow: 0 0 0 2px #ff3b30, 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
 
 </style>
 
@@ -114,7 +145,7 @@
   <input name="to"      placeholder="Куда"   type="text"   class="form-input" required>
   
   <!-- Новое поле телефона -->
-  <input name="phone" placeholder="+7 999 999 99 99" type="tel" class="form-input" required>
+<input name="phone" placeholder="+7 999 999 99 99" type="tel" class="form-input" required>
 
   <div class="row">
     <input name="date" type="date" class="form-input" required>
@@ -137,6 +168,69 @@
     <input name="date2" type="date" class="form-input">
   </div>
 
-  <button type="submit" class="submit-btn">Рассчитать стоимость</button>
+  <!--<button type="submit" class="submit-btn">Рассчитать стоимость</button>-->
+  <button type="button" class="submit-btn" onclick="submitForm()">Рассчитать стоимость</button>
+
 </form>
 </div>
+
+<!-- Модальное окно -->
+<div id="successModal" class="custom-modal hidden">
+  <div class="modal-content">
+    ✅ Заявка отправлена! Спасибо!
+  </div>
+</div>
+
+<script>
+  function submitForm() {
+    const form = document.getElementById('orderForm');
+
+    const data = {
+      fields: {
+        TITLE: "Форма мобильной версии сайта",
+        PHONE: [{ VALUE: form.phone.value, VALUE_TYPE: "WORK" }],
+        COMMENTS:
+          "Маршрут: " + form.from.value + " → " + form.to.value + "\n" +
+          "Дата: " + form.date.value + "\n" +
+          "Пассажиров: " + document.getElementById('passengerCount').textContent + "\n" +
+          (form.from2.value || form.to2.value || form.date2.value
+            ? "Обратный маршрут: " + form.from2.value + " → " + form.to2.value + "\nДата: " + form.date2.value
+            : ""),
+        SOURCE_ID: 'WEB',
+        STATUS_ID: 'NEW',
+      },
+      params: { REGISTER_SONET_EVENT: "Y" }
+    };
+
+    const webhookUrl = 'https://b24-cnqbly.bitrix24.ru/rest/18/xmxj1yft51yq1t9o/crm.lead.add.json';
+
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.result) {
+        form.reset();
+        showSuccessModal();
+      } else {
+        console.error(result);
+        alert('Ошибка: ' + (result.error_description || 'Не удалось создать лид'));
+      }
+    })
+    .catch(error => {
+      console.error('Ошибка:', error);
+      alert('Произошла ошибка при отправке.');
+    });
+  }
+
+  function showSuccessModal() {
+    const modal = document.getElementById('successModal');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+    }, 3000);
+  }
+</script>
+
